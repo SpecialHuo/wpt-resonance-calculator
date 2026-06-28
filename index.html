@@ -906,6 +906,7 @@
       const margin = toNumber(el.margin);
       const lt = toNumber(el.txL);
       const lr = toNumber(el.rxL);
+      const txLf = toNumber(el.txLf);
       const rt = toNumber(el.txR);
       const rr = toNumber(el.rxR);
       const coupled = coupling();
@@ -928,20 +929,25 @@
       const invFundRms = el.inverter.value === "full"
         ? 2 * Math.SQRT2 * vin / Math.PI
         : Math.SQRT2 * vin / Math.PI;
-      const itx = pin / invFundRms;
+      const inverterActiveCurrent = pin / invFundRms;
+      const isLccS = el.txType.value === "LCC" && el.rxType.value === "S" && txLf > 0;
+      const itxCoil = isLccS ? invFundRms / (w * txLf * 1e-6) : inverterActiveCurrent;
       const irx = Math.sqrt(p / rac);
       const mUH = k * Math.sqrt(lt * lr);
+      const mutualReactance = w * mUH * 1e-6;
+      const lccSIdealRxCurrent = isLccS ? mutualReactance * itxCoil / rac : NaN;
+      const lccSIdealPower = isLccS ? lccSIdealRxCurrent * lccSIdealRxCurrent * rac : NaN;
       const qtx = w * lt * 1e-6 / Math.max(rt, 1e-6);
       const qrxCoil = w * lr * 1e-6 / Math.max(rr, 1e-6);
       const qrxLoaded = w * lr * 1e-6 / Math.max(rr + rac, 1e-6);
       const kcrit = 1 / Math.sqrt(qtx * qrxLoaded);
-      const copperLoss = itx * itx * rt + irx * irx * rr;
+      const copperLoss = itxCoil * itxCoil * rt + irx * irx * rr;
       const rxVac = Math.sqrt(p * rac);
       const loadPowerRating = p * margin;
       const sweepLow = f * 0.8;
       const sweepHigh = f * 1.2;
       const mosVds = vin * Math.max(3, margin);
-      const mosCurrent = Math.max(inputDcCurrent, itx) * margin;
+      const mosCurrent = Math.max(inputDcCurrent, inverterActiveCurrent, itxCoil) * margin;
       const rectifierCurrent = iout * margin;
       const schottkyLoss = iout * 1.0;
       const rectifierNote = vout <= 12 && iout >= 1
@@ -951,8 +957,12 @@
         ? "Q 偏低，线圈内阻可能拖效率"
         : "Q 值可用，仍需看温升";
 
+      if (isLccS && Number.isFinite(lccSIdealPower) && lccSIdealPower < p * 0.95) {
+        warnings.push(`LCC-S 恒流校验：当前 Vin/Lf/k/Rac 理想可传约 ${fmt(lccSIdealPower, "W", 1)}，低于目标 ${fmt(p, "W", 1)}；可提高母线电压、减小 Lf、增大 k 或减轻负载。`);
+      }
+
       const capRows = rows.map(row => {
-        const sideCurrent = row.side === "tx" ? itx : irx;
+        const sideCurrent = row.side === "tx" ? itxCoil : irx;
         const sideVoltage = row.side === "tx" ? invFundRms : rxVac;
         const current = row.role === "Cf" ? sideVoltage * w * row.value : sideCurrent;
         const voltage = current / (w * row.value);
@@ -1007,6 +1017,12 @@
           small: "还要看驱动、散热和尖峰"
         },
         {
+          name: "LCC-S 功率自洽校验",
+          note: isLccS ? "按 Ip=Vin1/(ωLf)，P≈(ωMIp)²/Rac 估算" : "仅 Tx=LCC 且 Rx=S 时启用恒流功率校验",
+          value: isLccS ? fmt(lccSIdealPower, "W", 1) : "-",
+          small: isLccS ? `目标 ${fmt(p, "W", 1)}；理想 Is ${formatAmp(lccSIdealRxCurrent)}` : "当前拓扑不适用"
+        },
+        {
           name: "线圈 Q 值判断",
           note: qNote,
           value: `Tx ${qtx.toFixed(0)} / Rx ${qrxCoil.toFixed(0)}`,
@@ -1039,8 +1055,10 @@
           ["输入功率估算", fmt(pin, "W", 1), "按预估效率折算"],
           ["负载功率建议", fmt(loadPowerRating, "W", 1), "按器件余量倍数"],
           ["逆变基波 RMS", formatVolt(invFundRms), el.inverter.value === "full" ? "全桥方波基波" : "半桥方波基波"],
-          ["Tx 电流估算", formatAmp(itx), "用于发射侧器件初选"],
-          ["Rx 电流估算", formatAmp(irx), "用于接收侧器件初选"],
+          ["逆变有功电流", formatAmp(inverterActiveCurrent), "由目标功率反推"],
+          ["Tx 线圈电流", formatAmp(itxCoil), isLccS ? "LCC 恒流公式" : "按目标功率估算"],
+          ["Rx 电流估算", formatAmp(irx), "按目标功率/Rac"],
+          ["LCC-S 可传功率", isLccS ? fmt(lccSIdealPower, "W", 1) : "-", isLccS ? "理想恒流估算" : "当前拓扑不适用"],
           ["线圈 Q 值", `Tx ${qtx.toFixed(0)} / Rx ${qrxCoil.toFixed(0)}`, "只按线圈内阻估算"],
           ["扫频范围", `${sweepLow.toFixed(1)}-${sweepHigh.toFixed(1)} kHz`, "低压找峰值"],
           ["互感 M", fmt(mUH, "uH", 2), `k=${k.toFixed(3)}，间距 ${toNumber(el.gap)} mm`],

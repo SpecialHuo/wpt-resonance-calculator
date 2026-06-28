@@ -1,0 +1,1223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>无线充电 LCC / S 谐振匹配计算器</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f8;
+      --ink: #172023;
+      --muted: #667176;
+      --line: #d7dee2;
+      --panel: #ffffff;
+      --accent: #0f8f7f;
+      --accent-2: #d06a32;
+      --warn: #b33a2c;
+      --ok: #08764f;
+      --shadow: 0 18px 45px rgba(31, 46, 51, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(15,143,127,.08), transparent 38%),
+        linear-gradient(315deg, rgba(208,106,50,.08), transparent 36%),
+        var(--bg);
+    }
+
+    button, input, select { font: inherit; }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: end;
+      padding: 18px 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 54px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 720px;
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .icon-btn, .text-btn {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(23,32,35,.04);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    .icon-btn {
+      width: 42px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .text-btn {
+      padding: 0 14px;
+      font-weight: 700;
+    }
+
+    .icon-btn:hover, .text-btn:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(300px, 420px) 1fr;
+      gap: 22px;
+      margin-top: 22px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255,255,255,.9);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .input-panel {
+      position: sticky;
+      top: 18px;
+      padding: 18px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    h2, h3 {
+      margin: 0;
+      letter-spacing: 0;
+    }
+
+    h2 { font-size: 19px; }
+    h3 { font-size: 15px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    input, select {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 11px;
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(15,143,127,.12);
+    }
+
+    .side {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .hint {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .note-box {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(15,143,127,.2);
+      border-radius: 8px;
+      background: rgba(15,143,127,.06);
+      color: #284246;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .mode-toggle {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .mode-toggle label {
+      position: relative;
+      display: block;
+    }
+
+    .mode-toggle input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .mode-toggle span {
+      min-height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: border-color .16s ease, background .16s ease, color .16s ease;
+    }
+
+    .mode-toggle input:checked + span {
+      border-color: rgba(15,143,127,.38);
+      background: rgba(15,143,127,.08);
+      color: var(--accent);
+    }
+
+    .mode-toggle input:focus-visible + span {
+      box-shadow: 0 0 0 4px rgba(15,143,127,.12);
+    }
+
+    .derived-power {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #f8fbfb;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .derived-power b {
+      color: var(--accent);
+      font-size: 16px;
+    }
+
+    .visual {
+      min-height: 180px;
+      padding: 20px;
+      overflow: hidden;
+      display: grid;
+      gap: 16px;
+    }
+
+    .circuit {
+      width: 100%;
+      min-height: 168px;
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, rgba(23,32,35,.06) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(23,32,35,.05) 1px, transparent 1px),
+        #fbfcfc;
+      background-size: 32px 32px;
+      border: 1px solid var(--line);
+    }
+
+    .circuit line, .circuit path, .circuit circle {
+      fill: none;
+      stroke: #1f2a2d;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .circuit text {
+      fill: #243033;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .results {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .result-strip {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 15px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      animation: rise .38s ease both;
+    }
+
+    .result-strip strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .result-strip span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .value {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .value b {
+      display: block;
+      color: var(--accent);
+      font-size: 23px;
+      line-height: 1.05;
+    }
+
+    .value small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .status.ok { color: var(--ok); border-color: rgba(8,118,79,.25); background: rgba(8,118,79,.06); }
+    .status.warn { color: var(--warn); border-color: rgba(179,58,44,.25); background: rgba(179,58,44,.06); }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 92px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      display: grid;
+      align-content: space-between;
+      gap: 7px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .metric b {
+      color: var(--ink);
+      font-size: 21px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.08;
+    }
+
+    .checklist {
+      margin: 14px 0 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: #314044;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .checklist ol {
+      margin: 8px 0 0 20px;
+      padding: 0;
+    }
+
+    .advice-stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .formula {
+      margin-top: 14px;
+      padding: 16px;
+      color: #354246;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    .formula code {
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #eef3f3;
+      color: #203033;
+    }
+
+    .topology-pill {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 10px;
+      border: 1px solid rgba(15,143,127,.22);
+      border-radius: 8px;
+      color: var(--accent);
+      background: rgba(15,143,127,.07);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      transform: translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 11px 14px;
+      background: #172023;
+      color: #fff;
+      border-radius: 8px;
+      transition: opacity .18s ease, transform .18s ease;
+      font-size: 13px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 860px) {
+      header, main { grid-template-columns: 1fr; }
+      .actions { justify-content: flex-start; }
+      .input-panel { position: static; }
+    }
+
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 20px, 1180px); padding-top: 16px; }
+      .grid { grid-template-columns: 1fr; }
+      .mini-grid { grid-template-columns: 1fr; }
+      .result-strip { grid-template-columns: 1fr; }
+      .value { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div>
+        <h1>无线充电谐振匹配计算器</h1>
+        <p class="subtitle">快速计算发射端、接收端在 S / LCC 补偿下的电容参数。单位输入用 kHz、uH，结果自动换算为 nF / uF。</p>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" id="resetBtn" title="恢复示例参数" aria-label="恢复示例参数">↺</button>
+        <button class="text-btn" id="copyBtn">复制结果</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel input-panel" aria-label="参数输入">
+        <div class="section-title">
+          <h2>输入参数</h2>
+          <span class="topology-pill" id="comboLabel">LCC - S</span>
+        </div>
+
+        <div class="grid">
+          <div class="field">
+            <label for="freq">工作频率 kHz</label>
+            <input id="freq" type="number" min="1" step="0.1" value="85" />
+          </div>
+          <div class="field">
+            <label for="standard">标准值系列</label>
+            <select id="standard">
+              <option value="none">不匹配</option>
+              <option value="E6">E6</option>
+              <option value="E12" selected>E12</option>
+              <option value="E24">E24</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="section-title">
+            <h3>比赛目标</h3>
+          </div>
+          <div class="mode-toggle" role="radiogroup" aria-label="目标输入方式">
+            <label>
+              <input type="radio" name="targetMode" value="power" checked />
+              <span>已知输出功率</span>
+            </label>
+            <label>
+              <input type="radio" name="targetMode" value="load" />
+              <span>已知负载电阻</span>
+            </label>
+          </div>
+          <div class="grid">
+            <div class="field target-power">
+              <label for="power">输出功率 W</label>
+              <input id="power" type="number" min="0.1" step="1" value="100" />
+            </div>
+            <div class="field target-load">
+              <label for="loadR">负载电阻 Ω</label>
+              <input id="loadR" type="number" min="0.1" step="0.1" value="10" />
+            </div>
+            <div class="field">
+              <label for="vout">目标输出 V</label>
+              <input id="vout" type="number" min="0.1" step="0.1" value="24" />
+            </div>
+            <div class="field">
+              <label for="vin">直流母线 V</label>
+              <input id="vin" type="number" min="0.1" step="0.1" value="24" />
+            </div>
+            <div class="field">
+              <label for="eff">预估效率 %</label>
+              <input id="eff" type="number" min="1" max="99.9" step="0.1" value="80" />
+            </div>
+            <div class="field">
+              <label for="inverter">逆变方式</label>
+              <select id="inverter">
+                <option value="full" selected>全桥方波</option>
+                <option value="half">半桥方波</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="margin">器件余量倍数</label>
+              <input id="margin" type="number" min="1" step="0.1" value="2" />
+            </div>
+          </div>
+          <div class="derived-power" id="derivedPower">当前用于计算的输出功率：<b>100 W</b></div>
+          <p class="hint">选择“已知负载电阻”时，页面会自动按 <b>P = Vout² / Rload</b> 反推输出功率。</p>
+        </div>
+
+        <div class="side">
+          <div class="section-title">
+            <h3>发射端 Tx</h3>
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label for="txType">拓扑</label>
+              <select id="txType">
+                <option value="LCC" selected>LCC</option>
+                <option value="S">S 串联</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="txL">线圈电感 Lt uH</label>
+              <input id="txL" type="number" min="0.01" step="0.01" value="100" />
+            </div>
+            <div class="field">
+              <label for="txR">线圈内阻 Rt Ω</label>
+              <input id="txR" type="number" min="0" step="0.01" value="0.35" />
+            </div>
+            <div class="field lcc-only tx-lcc">
+              <label for="txLf">LCC 补偿电感 Lft uH</label>
+              <input id="txLf" type="number" min="0.01" step="0.01" value="20" />
+            </div>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="section-title">
+            <h3>接收端 Rx</h3>
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label for="rxType">拓扑</label>
+              <select id="rxType">
+                <option value="LCC">LCC</option>
+                <option value="S" selected>S 串联</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="rxL">线圈电感 Lr uH</label>
+              <input id="rxL" type="number" min="0.01" step="0.01" value="80" />
+            </div>
+            <div class="field">
+              <label for="rxR">线圈内阻 Rr Ω</label>
+              <input id="rxR" type="number" min="0" step="0.01" value="0.28" />
+            </div>
+            <div class="field lcc-only rx-lcc">
+              <label for="rxLf">LCC 补偿电感 Lfr uH</label>
+              <input id="rxLf" type="number" min="0.01" step="0.01" value="18" />
+            </div>
+          </div>
+        </div>
+
+        <div class="side">
+          <div class="section-title">
+            <h3>耦合与实测</h3>
+          </div>
+          <div class="mode-toggle" role="radiogroup" aria-label="耦合系数输入方式">
+            <label>
+              <input type="radio" name="kMode" value="direct" checked />
+              <span>直接填 k</span>
+            </label>
+            <label>
+              <input type="radio" name="kMode" value="measure" />
+              <span>由电感测量</span>
+            </label>
+          </div>
+          <div class="grid">
+            <div class="field k-direct">
+              <label for="kCouple">耦合系数 k</label>
+              <input id="kCouple" type="number" min="0.001" max="1" step="0.001" value="0.20" />
+            </div>
+            <div class="field k-measured">
+              <label for="lSame">同向串联总电感 uH</label>
+              <input id="lSame" type="number" min="0.01" step="0.01" value="216" />
+            </div>
+            <div class="field k-measured">
+              <label for="lOpp">反向串联总电感 uH</label>
+              <input id="lOpp" type="number" min="0.01" step="0.01" value="144" />
+            </div>
+            <div class="field">
+              <label for="gap">线圈距离 mm</label>
+              <input id="gap" type="number" min="0" step="0.1" value="30" />
+            </div>
+          </div>
+          <div class="derived-power" id="derivedK">当前用于计算的耦合系数：<b>0.200</b></div>
+          <div class="note-box">
+            由电感测量时，按实际距离摆好两个线圈，先测串联同向总电感，再把其中一个线圈接线反过来测反向总电感。页面会自动算 M 和 k。
+          </div>
+        </div>
+
+        <p class="hint">LCC 默认公式：并联支路 <b>Cf = 1/(w²Lf)</b>，线圈串联补偿 <b>Cs = 1/(w²(Lcoil - Lf))</b>，因此要求 Lf 小于线圈电感。</p>
+      </section>
+
+      <section>
+        <div class="panel visual">
+          <div class="section-title">
+            <h2>拓扑示意</h2>
+            <span id="freqLabel" class="topology-pill">85.0 kHz</span>
+          </div>
+          <svg class="circuit" viewBox="0 0 760 180" role="img" aria-label="无线充电补偿网络示意">
+            <line x1="28" y1="90" x2="110" y2="90"></line>
+            <path id="txShape" d=""></path>
+            <line x1="310" y1="90" x2="348" y2="90"></line>
+            <path d="M365 90 c10 -34 38 -34 48 0 c10 34 38 34 48 0 c10 -34 38 -34 48 0" stroke="var(--accent-2)"></path>
+            <path d="M110 35 q70 -26 140 0" stroke="rgba(15,143,127,.55)"></path>
+            <path d="M520 35 q70 -26 140 0" stroke="rgba(15,143,127,.55)"></path>
+            <line x1="512" y1="90" x2="550" y2="90"></line>
+            <path id="rxShape" d=""></path>
+            <line x1="710" y1="90" x2="734" y2="90"></line>
+            <text x="35" y="66">逆变器</text>
+            <text id="txText" x="122" y="145">Tx LCC</text>
+            <text x="385" y="145">耦合线圈</text>
+            <text id="rxText" x="552" y="145">Rx S</text>
+            <text x="673" y="66">整流/负载</text>
+          </svg>
+        </div>
+
+        <div class="results" id="results"></div>
+
+        <div class="results" id="engineering"></div>
+
+        <div class="formula">
+          <b>计算口径</b><br>
+          角频率 <code>w = 2πf</code>。S 串联补偿：<code>C = 1/(w²Lcoil)</code>。LCC 补偿：<code>Cf = 1/(w²Lf)</code>，<code>Cs = 1/(w²(Lcoil - Lf))</code>。标准电容反算频率：<code>f = 1/(2π√LC)</code>。整流后负载折算采用常见基波近似 <code>Rac ≈ 8Rdc/π²</code>。这里计算的是初始设计值和器件选型估算，实际样机还需结合耦合系数、负载、线圈 ESR、器件容差和温升做微调。
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast">已复制</div>
+
+  <script>
+    const ids = [
+      "freq", "standard",
+      "power", "loadR", "vout", "vin", "eff", "inverter", "margin",
+      "txType", "txL", "txR", "txLf",
+      "rxType", "rxL", "rxR", "rxLf",
+      "kCouple", "lSame", "lOpp", "gap"
+    ];
+    const el = Object.fromEntries(ids.map(id => [id, document.getElementById(id)]));
+    const targetModeInputs = [...document.querySelectorAll('input[name="targetMode"]')];
+    const kModeInputs = [...document.querySelectorAll('input[name="kMode"]')];
+    const results = document.getElementById("results");
+    const engineering = document.getElementById("engineering");
+    const derivedPower = document.getElementById("derivedPower");
+    const derivedK = document.getElementById("derivedK");
+    const comboLabel = document.getElementById("comboLabel");
+    const freqLabel = document.getElementById("freqLabel");
+    const txShape = document.getElementById("txShape");
+    const rxShape = document.getElementById("rxShape");
+    const txText = document.getElementById("txText");
+    const rxText = document.getElementById("rxText");
+    const toast = document.getElementById("toast");
+
+    const series = {
+      E6: [10, 15, 22, 33, 47, 68],
+      E12: [10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82],
+      E24: [10, 11, 12, 13, 15, 16, 18, 20, 22, 24, 27, 30, 33, 36, 39, 43, 47, 51, 56, 62, 68, 75, 82, 91]
+    };
+
+    function toNumber(node) {
+      return Number.parseFloat(node.value);
+    }
+
+    function capFarads(freqKHz, inductanceUH) {
+      const w = 2 * Math.PI * freqKHz * 1000;
+      const l = inductanceUH * 1e-6;
+      return 1 / (w * w * l);
+    }
+
+    function angular(freqKHz) {
+      return 2 * Math.PI * freqKHz * 1000;
+    }
+
+    function formatCap(f) {
+      if (!Number.isFinite(f) || f <= 0) return "-";
+      const nf = f * 1e9;
+      if (nf >= 1000) return `${(nf / 1000).toFixed(nf >= 10000 ? 1 : 2)} uF`;
+      if (nf >= 10) return `${nf.toFixed(2)} nF`;
+      if (nf >= 1) return `${nf.toFixed(3)} nF`;
+      return `${(f * 1e12).toFixed(1)} pF`;
+    }
+
+    function resonanceFreqKHz(inductanceUH, capacitanceF) {
+      const l = inductanceUH * 1e-6;
+      if (!(l > 0) || !(capacitanceF > 0)) return NaN;
+      return 1 / (2 * Math.PI * Math.sqrt(l * capacitanceF)) / 1000;
+    }
+
+    function fmt(value, unit, digits = 2) {
+      if (!Number.isFinite(value)) return "-";
+      return `${value.toFixed(digits)} ${unit}`;
+    }
+
+    function targetMode() {
+      return targetModeInputs.find(input => input.checked)?.value || "power";
+    }
+
+    function kMode() {
+      return kModeInputs.find(input => input.checked)?.value || "direct";
+    }
+
+    function targetPower() {
+      const mode = targetMode();
+      const vout = toNumber(el.vout);
+      if (mode === "load") {
+        const rload = toNumber(el.loadR);
+        return {
+          mode,
+          value: vout * vout / rload,
+          note: `由负载 ${rload} Ω 和输出 ${vout} V 反推`
+        };
+      }
+      return {
+        mode,
+        value: toNumber(el.power),
+        note: "由输出功率输入"
+      };
+    }
+
+    function coupling() {
+      const mode = kMode();
+      const lt = toNumber(el.txL);
+      const lr = toNumber(el.rxL);
+      if (mode === "measure") {
+        const lSame = toNumber(el.lSame);
+        const lOpp = toNumber(el.lOpp);
+        const m = (lSame - lOpp) / 4;
+        const k = m / Math.sqrt(lt * lr);
+        return {
+          mode,
+          value: k,
+          mutualUH: m,
+          note: `由 L同向 ${lSame} uH、L反向 ${lOpp} uH 计算`
+        };
+      }
+      const k = toNumber(el.kCouple);
+      return {
+        mode,
+        value: k,
+        mutualUH: k * Math.sqrt(lt * lr),
+        note: "由 k 直接输入"
+      };
+    }
+
+    function formatVolt(value) {
+      if (!Number.isFinite(value)) return "-";
+      if (value >= 1000) return `${(value / 1000).toFixed(2)} kV`;
+      return `${value.toFixed(value >= 100 ? 0 : 1)} V`;
+    }
+
+    function formatAmp(value) {
+      if (!Number.isFinite(value)) return "-";
+      return `${value.toFixed(value >= 10 ? 1 : 2)} A`;
+    }
+
+    function nearestStandardCap(f, name) {
+      if (name === "none" || !series[name] || !Number.isFinite(f) || f <= 0) return null;
+      const nf = f * 1e9;
+      const decade = Math.pow(10, Math.floor(Math.log10(nf)) - 1);
+      let best = null;
+      for (let shift = -1; shift <= 1; shift++) {
+        const scale = decade * Math.pow(10, shift);
+        for (const base of series[name]) {
+          const value = base * scale;
+          const err = Math.abs(value - nf) / nf;
+          if (!best || err < best.err) best = { value, err };
+        }
+      }
+      const farads = best.value * 1e-9;
+      return {
+        farads,
+        label: `${formatCap(farads)} (${name}, 偏差 ${(best.err * 100).toFixed(2)}%)`
+      };
+    }
+
+    function sideCalc(prefix, label, f, standard) {
+      const type = el[`${prefix}Type`].value;
+      const l = toNumber(el[`${prefix}L`]);
+      const lf = toNumber(el[`${prefix}Lf`]);
+      const rows = [];
+      const warnings = [];
+
+      if (!(f > 0) || !(l > 0)) {
+        warnings.push(`${label}: 频率和线圈电感必须大于 0`);
+        return { rows, warnings };
+      }
+
+      if (type === "S") {
+        const c = capFarads(f, l);
+        rows.push({
+          name: `${label} 串联补偿电容 Cs`,
+          note: `S 拓扑，按线圈电感 ${l} uH 谐振`,
+          value: c,
+          resonantUH: l,
+          side: prefix,
+          role: "Cs",
+          formula: "1/(w²Lcoil)",
+          std: nearestStandardCap(c, standard)
+        });
+      } else {
+        if (!(lf > 0)) {
+          warnings.push(`${label}: LCC 补偿电感 Lf 必须大于 0`);
+          return { rows, warnings };
+        }
+        if (lf >= l) {
+          warnings.push(`${label}: LCC 要求 Lf 小于线圈电感，否则 Cs 分母为 0 或负值`);
+          return { rows, warnings };
+        }
+        const cf = capFarads(f, lf);
+        const cs = capFarads(f, l - lf);
+        rows.push({
+          name: `${label} LCC 并联支路电容 Cf`,
+          note: `与补偿电感 Lf = ${lf} uH 谐振`,
+          value: cf,
+          resonantUH: lf,
+          side: prefix,
+          role: "Cf",
+          formula: "1/(w²Lf)",
+          std: nearestStandardCap(cf, standard)
+        });
+        rows.push({
+          name: `${label} LCC 线圈串联电容 Cs`,
+          note: `按 Lcoil - Lf = ${(l - lf).toFixed(3)} uH 谐振`,
+          value: cs,
+          resonantUH: l - lf,
+          side: prefix,
+          role: "Cs",
+          formula: "1/(w²(Lcoil - Lf))",
+          std: nearestStandardCap(cs, standard)
+        });
+      }
+      return { rows, warnings };
+    }
+
+    function engineeringCalc(f, rows) {
+      const target = targetPower();
+      const p = target.value;
+      const vout = toNumber(el.vout);
+      const vin = toNumber(el.vin);
+      const eff = toNumber(el.eff) / 100;
+      const margin = toNumber(el.margin);
+      const lt = toNumber(el.txL);
+      const lr = toNumber(el.rxL);
+      const rt = toNumber(el.txR);
+      const rr = toNumber(el.rxR);
+      const coupled = coupling();
+      const k = coupled.value;
+      const w = angular(f);
+      const warnings = [];
+
+      if (target.mode === "load" && !(toNumber(el.loadR) > 0)) warnings.push("负载电阻必须大于 0");
+      if (!(p > 0) || !(vout > 0) || !(vin > 0)) warnings.push("目标功率、输出电压、母线电压必须大于 0");
+      if (!(eff > 0 && eff < 1)) warnings.push("预估效率建议填 1 到 99.9 之间");
+      if (!(margin >= 1)) warnings.push("器件余量倍数至少为 1");
+      if (!(k > 0 && k <= 1)) warnings.push("耦合系数 k 需要在 0 到 1 之间");
+      if (coupled.mode === "measure" && !(toNumber(el.lSame) > toNumber(el.lOpp))) warnings.push("同向串联总电感应大于反向串联总电感，否则算出的互感为 0 或负值");
+
+      const rdc = vout * vout / p;
+      const rac = 8 * rdc / (Math.PI * Math.PI);
+      const iout = p / vout;
+      const pin = p / eff;
+      const inputDcCurrent = pin / vin;
+      const invFundRms = el.inverter.value === "full"
+        ? 2 * Math.SQRT2 * vin / Math.PI
+        : Math.SQRT2 * vin / Math.PI;
+      const itx = pin / invFundRms;
+      const irx = Math.sqrt(p / rac);
+      const mUH = k * Math.sqrt(lt * lr);
+      const qtx = w * lt * 1e-6 / Math.max(rt, 1e-6);
+      const qrxCoil = w * lr * 1e-6 / Math.max(rr, 1e-6);
+      const qrxLoaded = w * lr * 1e-6 / Math.max(rr + rac, 1e-6);
+      const kcrit = 1 / Math.sqrt(qtx * qrxLoaded);
+      const copperLoss = itx * itx * rt + irx * irx * rr;
+      const rxVac = Math.sqrt(p * rac);
+      const loadPowerRating = p * margin;
+      const sweepLow = f * 0.8;
+      const sweepHigh = f * 1.2;
+      const mosVds = vin * Math.max(3, margin);
+      const mosCurrent = Math.max(inputDcCurrent, itx) * margin;
+      const rectifierCurrent = iout * margin;
+      const schottkyLoss = iout * 1.0;
+      const rectifierNote = vout <= 12 && iout >= 1
+        ? `低压大电流，优先肖特基或同步整流；普通桥堆损耗会很明显`
+        : `整流器按输出电流留余量，注意二极管压降和散热`;
+      const qNote = qtx < 30 || qrxCoil < 30
+        ? "Q 偏低，线圈内阻可能拖效率"
+        : "Q 值可用，仍需看温升";
+
+      const capRows = rows.map(row => {
+        const sideCurrent = row.side === "tx" ? itx : irx;
+        const sideVoltage = row.side === "tx" ? invFundRms : rxVac;
+        const current = row.role === "Cf" ? sideVoltage * w * row.value : sideCurrent;
+        const voltage = current / (w * row.value);
+        const actualCap = row.std?.farads || row.value;
+        const actualFreq = resonanceFreqKHz(row.resonantUH, actualCap);
+        const freqNote = row.std
+          ? `按近似标准值 ${row.std.label} 反算`
+          : `按理论电容反算`;
+        return `
+          <article class="result-strip">
+            <div>
+              <strong>${row.name} 选型估算</strong>
+              <span>${row.role === "Cf" ? "按基波电压估算支路电流" : "按线圈电流估算串联电容应力"}；${freqNote}</span>
+            </div>
+            <div class="value">
+              <b>${formatVolt(voltage * margin)}</b>
+              <small>纹波 ${formatAmp(current * margin)}；实际谐振约 ${fmt(actualFreq, "kHz", 1)}</small>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      const adviceRows = [
+        {
+          name: "负载电阻功率建议",
+          note: `负载实际消耗 ${fmt(p, "W", 1)}，按余量倍数选功率电阻`,
+          value: fmt(loadPowerRating, "W", 1),
+          small: "建议风冷或多只并联分摊热量"
+        },
+        {
+          name: "直流输入电源建议",
+          note: `输入功率约 ${fmt(pin, "W", 1)}，母线 ${formatVolt(vin)}`,
+          value: formatAmp(inputDcCurrent * margin),
+          small: `电源电流建议；实际输入约 ${formatAmp(inputDcCurrent)}`
+        },
+        {
+          name: "推荐扫频范围",
+          note: "电容、线圈和位置都有误差，先从低压扫频找峰值",
+          value: `${sweepLow.toFixed(1)}-${sweepHigh.toFixed(1)} kHz`,
+          small: "先小功率，再升母线电压"
+        },
+        {
+          name: "整流器建议",
+          note: rectifierNote,
+          value: formatAmp(rectifierCurrent),
+          small: `电流建议；肖特基约损耗 ${fmt(schottkyLoss, "W", 1)} 量级`
+        },
+        {
+          name: "MOS 管建议",
+          note: "Vds 按母线倍数留余量，电流按输入和谐振电流取较大值",
+          value: `${formatVolt(mosVds)} / ${formatAmp(mosCurrent)}`,
+          small: "还要看驱动、散热和尖峰"
+        },
+        {
+          name: "线圈 Q 值判断",
+          note: qNote,
+          value: `Tx ${qtx.toFixed(0)} / Rx ${qrxCoil.toFixed(0)}`,
+          small: `空载线圈 Q；负载等效 Rx Q ${qrxLoaded.toFixed(1)}`
+        }
+      ].map(row => `
+        <article class="result-strip">
+          <div>
+            <strong>${row.name}</strong>
+            <span>${row.note}</span>
+          </div>
+          <div class="value">
+            <b>${row.value}</b>
+            <small>${row.small}</small>
+          </div>
+        </article>
+      `).join("");
+
+      return {
+        power: p,
+        powerNote: target.note,
+        k: k,
+        kNote: coupled.note,
+        warnings,
+        metrics: [
+          ["直流负载 Rdc", fmt(rdc, "Ω"), "按 Vout² / Pout"],
+          ["交流等效 Rac", fmt(rac, "Ω"), "整流桥基波近似"],
+          ["输出电流", formatAmp(iout), "负载侧直流电流"],
+          ["输入电流", formatAmp(inputDcCurrent), "直流母线电流估算"],
+          ["输入功率估算", fmt(pin, "W", 1), "按预估效率折算"],
+          ["负载功率建议", fmt(loadPowerRating, "W", 1), "按器件余量倍数"],
+          ["逆变基波 RMS", formatVolt(invFundRms), el.inverter.value === "full" ? "全桥方波基波" : "半桥方波基波"],
+          ["Tx 电流估算", formatAmp(itx), "用于发射侧器件初选"],
+          ["Rx 电流估算", formatAmp(irx), "用于接收侧器件初选"],
+          ["线圈 Q 值", `Tx ${qtx.toFixed(0)} / Rx ${qrxCoil.toFixed(0)}`, "只按线圈内阻估算"],
+          ["扫频范围", `${sweepLow.toFixed(1)}-${sweepHigh.toFixed(1)} kHz`, "低压找峰值"],
+          ["互感 M", fmt(mUH, "uH", 2), `k=${k.toFixed(3)}，间距 ${toNumber(el.gap)} mm`],
+          ["临界耦合 kcrit", kcrit.toFixed(3), k > kcrit ? "可能出现频率分裂，需扫频确认" : "通常先按单峰调谐"],
+          ["线圈铜损估算", fmt(copperLoss, "W", 1), "只含 Rt/Rr，不含开关和磁芯损耗"]
+        ],
+        adviceRows,
+        capRows
+      };
+    }
+
+    function renderEngineering(calc) {
+      const metricHtml = calc.metrics.map(([name, value, note]) => `
+        <div class="metric">
+          <span>${name}</span>
+          <b>${value}</b>
+          <span>${note}</span>
+        </div>
+      `).join("");
+      const status = calc.warnings.length
+        ? `<div class="status warn">${calc.warnings.join("<br>")}</div>`
+        : `<div class="status ok">工程估算已更新。下面这些值用于确定负载、线圈、器件耐压电流和调试顺序。</div>`;
+
+      engineering.innerHTML = `
+        ${status}
+        <div class="panel visual">
+          <div class="section-title">
+            <h2>现实搭建参数</h2>
+            <span class="topology-pill">${fmt(calc.power, "W", 1)}</span>
+          </div>
+          <p class="hint">${calc.powerNote}；${calc.kNote}。</p>
+          <div class="mini-grid">${metricHtml}</div>
+          <div class="advice-stack">${calc.adviceRows}</div>
+          <div class="checklist">
+            <b>第一次搭建建议按这个顺序来</b>
+            <ol>
+              <li>先确定比赛要求的 Pout、Vout、线圈距离和工作频率。</li>
+              <li>按空间尺寸绕 Tx/Rx 线圈，实测 Lt、Lr、Rt、Rr；改变距离实测或估算 k。</li>
+              <li>用本页算 Cs/Cf 初值，按标准电容反算频率，再准备几个相邻电容用于微调。</li>
+              <li>上电从低母线电压开始，示波器看线圈电流、MOS 管 Vds、整流输出和电容温升，再微调电容。</li>
+            </ol>
+          </div>
+        </div>
+        ${calc.capRows}
+      `;
+    }
+
+    function renderRow(row) {
+      return `
+        <article class="result-strip">
+          <div>
+            <strong>${row.name}</strong>
+            <span>${row.note}；公式 ${row.formula}${row.std ? `；近似标准值 ${row.std.label}` : ""}</span>
+          </div>
+          <div class="value">
+            <b>${formatCap(row.value)}</b>
+            <small>${(row.value * 1e9).toFixed(4)} nF</small>
+          </div>
+        </article>
+      `;
+    }
+
+    function shapeFor(type, x) {
+      if (type === "S") {
+        return `M${x} 90 h28 m0 -18 v36 m14 -36 v36 m0 -18 h28 c7 -25 28 -25 35 0 c7 25 28 25 35 0 h34`;
+      }
+      return `M${x} 90 h20 c7 -24 27 -24 34 0 c7 24 27 24 34 0 h20 m0 -20 v40 m14 -40 v40 m0 -20 h20 m0 -42 v84 m0 -42 h18 m0 -17 v34 m13 -34 v34 m0 -17 h20`;
+    }
+
+    function updateVisual() {
+      const tx = el.txType.value;
+      const rx = el.rxType.value;
+      const mode = targetMode();
+      const couplingMode = kMode();
+      comboLabel.textContent = `${tx} - ${rx}`;
+      freqLabel.textContent = `${toNumber(el.freq).toFixed(1)} kHz`;
+      txShape.setAttribute("d", shapeFor(tx, 112));
+      rxShape.setAttribute("d", shapeFor(rx, 552));
+      txText.textContent = `Tx ${tx}`;
+      rxText.textContent = `Rx ${rx}`;
+      document.querySelector(".tx-lcc").style.display = tx === "LCC" ? "grid" : "none";
+      document.querySelector(".rx-lcc").style.display = rx === "LCC" ? "grid" : "none";
+      document.querySelector(".target-power").style.display = mode === "power" ? "grid" : "none";
+      document.querySelector(".target-load").style.display = mode === "load" ? "grid" : "none";
+      document.querySelector(".k-direct").style.display = couplingMode === "direct" ? "grid" : "none";
+      document.querySelectorAll(".k-measured").forEach(node => {
+        node.style.display = couplingMode === "measure" ? "grid" : "none";
+      });
+      const target = targetPower();
+      const coupled = coupling();
+      derivedPower.innerHTML = `当前用于计算的输出功率：<b>${fmt(target.value, "W", 2)}</b><br>${target.note}`;
+      derivedK.innerHTML = `当前用于计算的耦合系数：<b>${Number.isFinite(coupled.value) ? coupled.value.toFixed(3) : "-"}</b><br>互感 M：${fmt(coupled.mutualUH, "uH", 2)}；${coupled.note}`;
+    }
+
+    function calculate() {
+      updateVisual();
+      const f = toNumber(el.freq);
+      const standard = el.standard.value;
+      const tx = sideCalc("tx", "发射端 Tx", f, standard);
+      const rx = sideCalc("rx", "接收端 Rx", f, standard);
+      const rows = [...tx.rows, ...rx.rows];
+      const warnings = [...tx.warnings, ...rx.warnings];
+      const eng = engineeringCalc(f, rows);
+
+      results.innerHTML = "";
+      if (warnings.length) {
+        results.insertAdjacentHTML("beforeend", `<div class="status warn">${warnings.join("<br>")}</div>`);
+      } else {
+        results.insertAdjacentHTML("beforeend", `<div class="status ok">参数有效。下面是 ${el.txType.value} - ${el.rxType.value} 组合在 ${f} kHz 下的理想谐振匹配初值。</div>`);
+      }
+      results.insertAdjacentHTML("beforeend", rows.map(renderRow).join(""));
+      renderEngineering(eng);
+    }
+
+    function copyResult() {
+      const f = toNumber(el.freq);
+      const standard = el.standard.value;
+      const tx = sideCalc("tx", "Tx", f, standard);
+      const rx = sideCalc("rx", "Rx", f, standard);
+      const rows = [...tx.rows, ...rx.rows];
+      const eng = engineeringCalc(f, rows);
+      const target = targetPower();
+      const coupled = coupling();
+      const lines = [
+        `无线充电谐振匹配参数`,
+        `频率: ${f} kHz`,
+        `目标: ${fmt(target.value, "W", 2)} / ${el.vout.value} V，母线 ${el.vin.value} V，效率估算 ${el.eff.value}%`,
+        `目标输入方式: ${target.mode === "load" ? `已知负载电阻 ${el.loadR.value} Ω` : "已知输出功率"}`,
+        `拓扑: Tx ${el.txType.value} / Rx ${el.rxType.value}`,
+        `线圈: Lt ${el.txL.value} uH / Rt ${el.txR.value} Ω，Lr ${el.rxL.value} uH / Rr ${el.rxR.value} Ω，k ${Number.isFinite(coupled.value) ? coupled.value.toFixed(3) : "-"}，M ${fmt(coupled.mutualUH, "uH", 2)}`,
+        `耦合输入方式: ${coupled.mode === "measure" ? `由电感测量，L同向 ${el.lSame.value} uH，L反向 ${el.lOpp.value} uH` : "直接填 k"}`,
+        `工程估算: ${eng.metrics.map(([name, value]) => `${name} ${value}`).join("；")}`,
+        ...rows.map(row => {
+          const actualCap = row.std?.farads || row.value;
+          const actualFreq = resonanceFreqKHz(row.resonantUH, actualCap);
+          return `${row.name}: ${formatCap(row.value)} (${(row.value * 1e9).toFixed(4)} nF)，${row.std ? `近似标准值 ${row.std.label}，` : ""}实际谐振约 ${fmt(actualFreq, "kHz", 1)}`;
+        })
+      ];
+      navigator.clipboard.writeText(lines.join("\n")).then(() => {
+        toast.classList.add("show");
+        setTimeout(() => toast.classList.remove("show"), 1300);
+      });
+    }
+
+    function resetDemo() {
+      el.freq.value = 85;
+      el.standard.value = "E12";
+      targetModeInputs.forEach(input => input.checked = input.value === "power");
+      el.power.value = 100;
+      el.loadR.value = 10;
+      el.vout.value = 24;
+      el.vin.value = 24;
+      el.eff.value = 80;
+      el.inverter.value = "full";
+      el.margin.value = 2;
+      el.txType.value = "LCC";
+      el.txL.value = 100;
+      el.txR.value = 0.35;
+      el.txLf.value = 20;
+      el.rxType.value = "S";
+      el.rxL.value = 80;
+      el.rxR.value = 0.28;
+      el.rxLf.value = 18;
+      kModeInputs.forEach(input => input.checked = input.value === "direct");
+      el.kCouple.value = 0.20;
+      el.lSame.value = 216;
+      el.lOpp.value = 144;
+      el.gap.value = 30;
+      calculate();
+    }
+
+    ids.forEach(id => el[id].addEventListener("input", calculate));
+    targetModeInputs.forEach(input => input.addEventListener("change", calculate));
+    kModeInputs.forEach(input => input.addEventListener("change", calculate));
+    document.getElementById("copyBtn").addEventListener("click", copyResult);
+    document.getElementById("resetBtn").addEventListener("click", resetDemo);
+    calculate();
+  </script>
+</body>
+</html>
